@@ -9,6 +9,14 @@ Methods come in two forms:
 
 ---
 
+## Planned Contributions
+
+| Method | Status | Contributor | Paper |
+|--------|--------|-------------|-------|
+| FroSSL | Implementation planned | [@soubuniaola](https://github.com/soubuniaola) | [Skean et al., 2024](https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/12410.pdf) |
+
+---
+
 ## Complete Method Table
 
 `TeacherStudent†` in the callbacks column means the method requires `TeacherStudentCallback` when using the forward-function approach (EMA teacher updates). Method classes handle this internally.
