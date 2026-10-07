@@ -9,6 +9,7 @@ Available forward functions:
     - ``simclr`` — SimCLR contrastive learning
     - ``byol`` — BYOL momentum self-distillation
     - ``vicreg`` — VICReg variance-invariance-covariance regularization
+    - ``frossl`` — FroSSL multiview objective
     - ``barlow_twins`` — Barlow Twins cross-correlation alignment
     - ``swav`` — SwAV online clustering
     - ``nnclr`` — NNCLR nearest-neighbor contrastive learning
@@ -374,6 +375,42 @@ def byol(self, batch: dict[str, Any], stage: str) -> dict[str, torch.Tensor]:
             target_only_features = self.backbone.forward_teacher(images)
         out["embedding"] = target_only_features.detach()
 
+    return out
+
+
+def frossl(self, batch: dict[str, Any], stage: str) -> dict[str, torch.Tensor]:
+    """Forward function for FroSSL.
+
+    Args:
+        self: Module with ``backbone``, ``projector``, and ``frossl_loss``.
+        batch: A multiview batch with aligned view dictionaries during training,
+            or one ``image`` dictionary during evaluation.
+        stage: Training stage (``train``, ``val``, or ``test``).
+
+    Returns:
+        A dictionary with backbone ``embedding`` and optional ``label``;
+        training also supplies ``loss``.
+
+    Note:
+        The loss uses aligned projections from at least two augmented views.
+    """
+    views = _get_views_list(batch)
+    if views is None:
+        out = {"embedding": self.backbone(batch["image"])}
+        if "label" in batch:
+            out["label"] = batch["label"]
+        return out
+
+    if len(views) < 2:
+        raise ValueError("FroSSL requires at least two aligned views")
+
+    embeddings = [self.backbone(view["image"]) for view in views]
+    out = {"embedding": torch.cat(embeddings, dim=0)}
+    if "label" in views[0]:
+        out["label"] = torch.cat([view["label"] for view in views], dim=0)
+    if self.training:
+        projections = [self.projector(embedding) for embedding in embeddings]
+        out["loss"] = self.frossl_loss(projections)
     return out
 
 
