@@ -9,14 +9,6 @@ Methods come in two forms:
 
 ---
 
-## Planned Contributions
-
-| Method | Status | Contributor | Paper |
-|--------|--------|-------------|-------|
-| FroSSL | Loss implemented; training validation pending | [@soubuniaola](https://github.com/soubuniaola) | [Skean et al., 2024](https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/12410.pdf) |
-
----
-
 ## Complete Method Table
 
 `TeacherStudent†` in the callbacks column means the method requires `TeacherStudentCallback` when using the forward-function approach (EMA teacher updates). Method classes handle this internally.
@@ -106,6 +98,42 @@ config in its module docstring.
 
 ---
 
+## FroSSL
+
+FroSSL accepts two or more aligned views of each image. The backbone provides
+features for evaluation callbacks; the projector maps those features to the
+space regularized by `FroSSLLoss`. For two views, the paper's reported
+invariance weight is `1.4`; for four or eight views it is `2.0`. The loss
+class defaults to `1.0`, matching the authors' multiview implementation.
+
+```python
+import stable_pretraining as spt
+
+model = spt.FroSSL(
+    backbone=backbone,
+    projector=projector,
+    optim={"optimizer": {"type": "SGD", "lr": 0.03, "momentum": 0.9}},
+    invariance_weight=1.4,
+)
+```
+
+Training batches come from `MultiViewTransform` as `{"views": [view1, view2, ...]}`
+or a dictionary of named views. Each view contains an `image` tensor, and
+optional `label` and `sample_idx` tensors. Evaluation uses one `{"image": ...}`
+batch. The forward function returns a scalar `loss` and backbone `embedding`
+for training, and `embedding` without `loss` for single-view evaluation.
+Callbacks such as `OnlineProbe` can read the returned `embedding` and `label`.
+
+The loss follows the authors' released multiview code: feature columns are
+L2-normalized across the local batch without mean-centering, and the
+trace-normalized Gram matrix is regularized. The paper presents a centered
+covariance formulation. Distributed training uses each rank's local batch
+statistics. See [`examples/frossl_cifar10.py`](examples/frossl_cifar10.py) for
+the complete `Manager` and online-probe setup; `--smoke` runs without downloads
+and does not measure representation quality.
+
+---
+
 ## Loss Classes
 
 All loss classes are importable from `stable_pretraining.losses`:
@@ -115,6 +143,7 @@ All loss classes are importable from `stable_pretraining.losses`:
 | `NTXEntLoss` | SimCLR, NNCLR, MoCov2, MoCov3 |
 | `BYOLLoss` | BYOL |
 | `VICRegLoss` | VICReg, VICRegL |
+| `FroSSLLoss` | FroSSL |
 | `BarlowTwinsLoss` | Barlow Twins |
 | `SwAVLoss` | SwAV |
 | `DINOv1Loss` | DINO, iBOT, MIMRefiner |

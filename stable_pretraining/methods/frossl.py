@@ -1,4 +1,17 @@
-"""Convenience module for FroSSL."""
+"""Convenience module for FroSSL.
+
+Example::
+
+    import torch
+    import stable_pretraining as spt
+
+    model = spt.FroSSL(
+        backbone=spt.backbone.from_torchvision("resnet18", low_resolution=True),
+        projector=torch.nn.Linear(512, 1024),
+        optim={"optimizer": {"type": "SGD", "lr": 0.03}},
+        invariance_weight=1.4,
+    )
+"""
 
 from typing import Any
 
@@ -21,6 +34,7 @@ class FroSSL(Module):
     Note:
         The projector and optimizer are explicit so experiments can match
         the authors' settings without hidden architecture defaults.
+        Introduced by Skean et al. :cite:`skean2024frossl`.
     """
 
     def __init__(
@@ -32,6 +46,7 @@ class FroSSL(Module):
     ) -> None:
         super().__init__(
             forward=frossl,
+            hparams={"invariance_weight": invariance_weight},
             backbone=backbone,
             projector=projector,
             frossl_loss=FroSSLLoss(invariance_weight=invariance_weight),

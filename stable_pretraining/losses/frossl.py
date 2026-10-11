@@ -16,10 +16,14 @@ class FroSSLLoss(torch.nn.Module):
             tune this weight for each number of views.
 
     Note:
-        Each ``[batch, features]`` view is L2-normalized along the batch axis.
+        Following the authors' multiview code, each ``[batch, features]`` view
+        is L2-normalized along the batch axis without mean-centering. The paper
+        describes a centered covariance; this implementation uses the
+        trace-normalized Gram objective from the released code.
         The per-view regularizer is the log of the squared Frobenius norm of
         its trace-normalized Gram matrix. The invariance term compares every
         view with the mean view, following Equation 3 of the FroSSL paper.
+        Statistics are local to each process under distributed training.
         See Skean et al., ECCV 2024, https://arxiv.org/abs/2310.02903.
     """
 
