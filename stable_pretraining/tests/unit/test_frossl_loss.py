@@ -49,6 +49,37 @@ def test_multiview_matches_pairwise_invariance():
     torch.testing.assert_close(actual, FroSSLLoss(0.7)(list(reversed(views))))
 
 
+@pytest.mark.parametrize(
+    ("count", "batch", "features", "expected_loss", "expected_gradient"),
+    [
+        (4, 3, 5, 47.566494933409814, 0.001810185782627538),
+        (8, 7, 3, 46.25868643630915, 0.004227094021293232),
+    ],
+)
+def test_matches_authors_multiview_reference(
+    count, batch, features, expected_loss, expected_gradient
+):
+    # Pin the authors' released multiview_frossl_loss_func on fixed inputs:
+    # https://github.com/OFSkean/FroSSL/blob/main/solo/losses/frossl.py
+    rows = torch.arange(batch)[:, None]
+    columns = torch.arange(features)[None, :]
+    views = [
+        (
+            ((rows * 7 + columns * 11 + index * 13) % 17 - 8).to(torch.float64)
+            + (((rows + 1) * (columns + 1) * (index + 1)) % 5).to(torch.float64) / 5
+        ).requires_grad_()
+        for index in range(count)
+    ]
+
+    loss = FroSSLLoss(invariance_weight=2.0)(views)
+    first_gradient = torch.autograd.grad(loss, views)[0][0, 0]
+
+    assert loss.item() == pytest.approx(expected_loss, rel=1e-11, abs=1e-11)
+    assert first_gradient.item() == pytest.approx(
+        expected_gradient, rel=1e-11, abs=1e-11
+    )
+
+
 def test_wide_projection_uses_equivalent_gram_matrix():
     first = torch.tensor([[1.0, 2.0, 3.0, 4.0], [2.0, 1.0, -1.0, 3.0]])
     second = first.flip(0)
