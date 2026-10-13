@@ -17,6 +17,8 @@ set -euo pipefail
 : "${RUN_ROOT:?Set RUN_ROOT to a shared directory for checkpoints and metrics}"
 cd "$REPO_ROOT"
 
+"${PYTHON_BIN:-python}" -c 'import torch; assert torch.cuda.is_available(), "PyTorch cannot use the allocated GPU"; print("CUDA device:", torch.cuda.get_device_name(0))'
+
 "${PYTHON_BIN:-python}" examples/frossl_cifar10.py \
     --data-root "$DATA_ROOT" \
     --cache-dir "$RUN_ROOT" \
