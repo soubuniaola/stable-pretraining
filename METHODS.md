@@ -132,6 +132,35 @@ statistics. See [`examples/frossl_cifar10.py`](examples/frossl_cifar10.py) for
 the complete `Manager` and online-probe setup; `--smoke` runs without downloads
 and does not measure representation quality.
 
+For one-dataset validation, the example splits CIFAR-10's 50,000 training
+images into 45,000 training and 5,000 validation images with a saved seed and
+indices. It evaluates the final online linear probe once on the untouched
+10,000-image official test set. This online-probe result is not the paper's
+post-training linear-evaluation protocol. The run directory contains
+`run_config.json`, `data_split.json`, and `evaluation.json` alongside the
+`Manager`-generated `sidecar.json`, `metrics.csv`, and `checkpoints/last.ckpt`.
+Keep run outputs and downloaded data outside the Git repository.
+
+```bash
+# Local data staging and training (one GPU if available).
+python examples/frossl_cifar10.py --download --data-root /path/to/data \
+    --cache-dir /path/to/runs --epochs 100 --batch-size 128
+
+# Brown CS Hydra: stage CIFAR-10 from the login host before submission.
+export REPO_ROOT=/path/to/stable-pretraining
+export DATA_ROOT=/path/to/shared/data RUN_ROOT=/path/to/shared/runs
+export PYTHON_BIN=/path/to/venv/bin/python
+"$PYTHON_BIN" -c 'from torchvision.datasets import CIFAR10; import os; CIFAR10(root=os.environ["DATA_ROOT"], train=True, download=True); CIFAR10(root=os.environ["DATA_ROOT"], train=False, download=True)'
+mkdir -p "$RUN_ROOT"
+cd "$RUN_ROOT"
+sbatch "$REPO_ROOT/examples/frossl_cifar10.slurm"
+```
+
+The batch script uses Hydra's `gpus` partition and one GPU. The compute job
+does not download data. The `frossl-cifar10-<jobid>.out` and `.err` files are
+written to the submission directory and capture the process log. Use
+`spt web "$RUN_ROOT/runs"` to inspect run metrics.
+
 ---
 
 ## Loss Classes
