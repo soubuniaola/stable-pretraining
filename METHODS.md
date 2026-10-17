@@ -160,6 +160,15 @@ The batch script uses Hydra's `gpus` partition and one GPU. The compute job
 does not download data. The `frossl-cifar10-<jobid>.out` and `.err` files are
 written to the submission directory and capture the process log. Use
 `spt web "$RUN_ROOT/runs"` to inspect run metrics.
+After a run finishes, generate `training_curves.png` and the epoch-level
+`training_curves.csv` from its registry metrics:
+
+```bash
+python examples/plot_frossl_cifar10.py /path/to/run-directory
+```
+
+The plot shows FroSSL training loss, online-probe training loss, and held-out
+online-probe validation accuracy. FroSSL itself has no classification accuracy.
 
 ---
 
