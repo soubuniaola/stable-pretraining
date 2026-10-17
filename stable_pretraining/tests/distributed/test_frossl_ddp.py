@@ -15,6 +15,7 @@ import stable_pretraining as spt
 
 
 pytestmark = [
+    pytest.mark.distributed,
     pytest.mark.integration,
     pytest.mark.skipif(
         sys.platform != "linux" or not torch.distributed.is_gloo_available(),

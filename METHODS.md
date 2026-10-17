@@ -98,80 +98,6 @@ config in its module docstring.
 
 ---
 
-## FroSSL
-
-FroSSL accepts two or more aligned views of each image. The backbone provides
-features for evaluation callbacks; the projector maps those features to the
-space regularized by `FroSSLLoss`. For two views, the paper's reported
-invariance weight is `1.4`; for four or eight views it is `2.0`. The loss
-class defaults to `1.0`, matching the authors' multiview implementation.
-
-```python
-import stable_pretraining as spt
-
-model = spt.FroSSL(
-    backbone=backbone,
-    projector=projector,
-    optim={"optimizer": {"type": "SGD", "lr": 0.03, "momentum": 0.9}},
-    invariance_weight=1.4,
-)
-```
-
-Training batches come from `MultiViewTransform` as `{"views": [view1, view2, ...]}`
-or a dictionary of named views. Each view contains an `image` tensor, and
-optional `label` and `sample_idx` tensors. Evaluation uses one `{"image": ...}`
-batch. The forward function returns a scalar `loss` and backbone `embedding`
-for training, and `embedding` without `loss` for single-view evaluation.
-Callbacks such as `OnlineProbe` can read the returned `embedding` and `label`.
-
-The loss follows the authors' released multiview code: feature columns are
-L2-normalized across the local batch without mean-centering, and the
-trace-normalized Gram matrix is regularized. The paper presents a centered
-covariance formulation. Distributed training uses each rank's local batch
-statistics. See [`examples/frossl_cifar10.py`](examples/frossl_cifar10.py) for
-the complete `Manager` and online-probe setup; `--smoke` runs without downloads
-and does not measure representation quality.
-
-For one-dataset validation, the example splits CIFAR-10's 50,000 training
-images into 45,000 training and 5,000 validation images with a saved seed and
-indices. It evaluates the final online linear probe once on the untouched
-10,000-image official test set. This online-probe result is not the paper's
-post-training linear-evaluation protocol. The run directory contains
-`run_config.json`, `data_split.json`, and `evaluation.json` alongside the
-`Manager`-generated `sidecar.json`, `metrics.csv`, and `checkpoints/last.ckpt`.
-Keep run outputs and downloaded data outside the Git repository.
-
-```bash
-# Local data staging and training (one GPU if available).
-python examples/frossl_cifar10.py --download --data-root /path/to/data \
-    --cache-dir /path/to/runs --epochs 100 --batch-size 128
-
-# Brown CS Hydra: stage CIFAR-10 from the login host before submission.
-export REPO_ROOT=/path/to/stable-pretraining
-export DATA_ROOT=/path/to/shared/data RUN_ROOT=/path/to/shared/runs
-export PYTHON_BIN=/path/to/venv/bin/python
-"$PYTHON_BIN" -c 'from torchvision.datasets import CIFAR10; import os; CIFAR10(root=os.environ["DATA_ROOT"], train=True, download=True); CIFAR10(root=os.environ["DATA_ROOT"], train=False, download=True)'
-mkdir -p "$RUN_ROOT"
-cd "$RUN_ROOT"
-sbatch "$REPO_ROOT/examples/frossl_cifar10.slurm"
-```
-
-The batch script uses Hydra's `gpus` partition and one GPU. The compute job
-does not download data. The `frossl-cifar10-<jobid>.out` and `.err` files are
-written to the submission directory and capture the process log. Use
-`spt web "$RUN_ROOT/runs"` to inspect run metrics.
-After a run finishes, generate `training_curves.png` and the epoch-level
-`training_curves.csv` from its registry metrics:
-
-```bash
-python examples/plot_frossl_cifar10.py /path/to/run-directory
-```
-
-The plot shows FroSSL training loss, online-probe training loss, and held-out
-online-probe validation accuracy. FroSSL itself has no classification accuracy.
-
----
-
 ## Loss Classes
 
 All loss classes are importable from `stable_pretraining.losses`:
@@ -181,7 +107,6 @@ All loss classes are importable from `stable_pretraining.losses`:
 | `NTXEntLoss` | SimCLR, NNCLR, MoCov2, MoCov3 |
 | `BYOLLoss` | BYOL |
 | `VICRegLoss` | VICReg, VICRegL |
-| `FroSSLLoss` | FroSSL |
 | `BarlowTwinsLoss` | Barlow Twins |
 | `SwAVLoss` | SwAV |
 | `DINOv1Loss` | DINO, iBOT, MIMRefiner |
